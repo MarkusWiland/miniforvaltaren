@@ -14,20 +14,181 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum LeaseStatus {
+  ACTIVE
+  ENDED
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
+
 model User {
-  id            String    @id
+  id            String  @id
   name          String
   email         String
-  emailVerified Boolean   @default(false)
+  emailVerified Boolean @default(false)
   image         String?
   role          String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @default(now()) @updatedAt
-  sessions      Session[]
-  accounts      Account[]
+
+  landlord       Landlord?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @default(now()) @updatedAt
+  sessions       Session[]
+  accounts       Account[]
+  LandlordMember LandlordMember[]
 
   @@unique([email])
   @@map("user")
+}
+
+model Landlord {
+  id          String           @id @default(cuid())
+  userId      String           @unique
+  user        User             @relation(fields: [userId], references: [id])
+  orgName     String?
+  properties  Property[]
+  tenants     Tenant[]
+  leases      Lease[]
+  RentInvoice RentInvoice[]
+  Ticket      Ticket[]
+  members     LandlordMember[] // <-- add this
+}
+
+model Property {
+  id          String   @id @default(cuid())
+  landlordId  String
+  landlord    Landlord @relation(fields: [landlordId], references: [id])
+  name        String
+  address     String
+  units       Unit[]
+  intakeToken String   @unique @default(cuid()) // offentlig token för QR-länk
+  createdAt   DateTime @default(now())
+}
+
+model Unit {
+  id         String   @id @default(cuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id])
+  label      String // t.ex. A-101
+  leases     Lease[]
+  Ticket     Ticket[]
+}
+
+model Tenant {
+  id         String   @id @default(cuid())
+  landlordId String
+  landlord   Landlord @relation(fields: [landlordId], references: [id])
+  name       String
+  email      String?
+  phone      String?
+  leases     Lease[]
+  Ticket     Ticket[]
+}
+
+model Lease {
+  id         String      @id @default(cuid())
+  landlordId String
+  landlord   Landlord    @relation(fields: [landlordId], references: [id])
+  unitId     String
+  unit       Unit        @relation(fields: [unitId], references: [id])
+  tenantId   String
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rentAmount Int
+  dueDay     Int
+  startDate  DateTime
+  endDate    DateTime?
+  status     LeaseStatus @default(ACTIVE)
+
+  invoices RentInvoice[] // 👈 lägg till
+}
+
+model RentInvoice {
+  id         String   @id @default(cuid())
+  landlordId String
+  landlord   Landlord @relation(fields: [landlordId], references: [id])
+
+  leaseId String
+  lease   Lease  @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+
+  periodYear  Int
+  periodMonth Int
+  dueDate     DateTime
+  amount      Int // i öre
+  status      InvoiceStatus @default(PENDING)
+  paidAt      DateTime?
+
+  payments Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([leaseId, periodYear, periodMonth]) // en avi per avtal+månad
+  @@index([landlordId, status])
+  @@index([dueDate])
+}
+
+model Payment {
+  id            String      @id @default(cuid())
+  rentInvoiceId String
+  rentInvoice   RentInvoice @relation(fields: [rentInvoiceId], references: [id], onDelete: Cascade)
+
+  amount    Int // i öre
+  paidDate  DateTime
+  reference String?
+  method    String? // "banköverföring", "swish", etc.
+
+  createdAt DateTime @default(now())
+
+  @@index([paidDate])
+}
+
+// Lägg till i Prisma
+enum Role {
+  OWNER // full kontroll
+  ADMIN // nästan allt (ej fakturering/ägarebyte)
+  MANAGER // CRUD properties/units/tenants/leases/tickets
+  ACCOUNTANT // läs + hantera avier/betalningar
+  STAFF // endast tickets (läsa/uppdatera), läsa properties/units
+  VIEWER // read-only
+}
+
+model LandlordMember {
+  id         String @id @default(cuid())
+  landlordId String
+  userId     String
+  role       Role
+
+  landlord Landlord @relation(fields: [landlordId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@unique([landlordId, userId])
+}
+
+model Ticket {
+  id         String   @id @default(cuid())
+  landlordId String
+  landlord   Landlord @relation(fields: [landlordId], references: [id])
+
+  unitId   String?
+  unit     Unit?   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  status      TicketStatus @default(OPEN)
+
+  createdAt DateTime  @default(now())
+  closedAt  DateTime?
 }
 
 model Session {
