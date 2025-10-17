@@ -1,5 +1,4 @@
-// app/(public)/report/[token]/page.tsx
-export const runtime = "nodejs";
+
 
 import { notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
