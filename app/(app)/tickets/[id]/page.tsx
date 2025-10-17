@@ -10,13 +10,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { deleteTicketAction, updateTicketStatusAction } from "../actions/action";
-
-
+import {
+  deleteTicketAction,
+  updateTicketStatusAction,
+} from "../actions/action";
 
 function formatSE(date: Date) {
   return new Date(date).toLocaleDateString("sv-SE", {
@@ -26,11 +33,19 @@ function formatSE(date: Date) {
   });
 }
 
-export default async function TicketDetailPage({ params }: { params: { id: string } }) {
-  const landlordId = await requireLandlordId({ ensure: true, elseRedirect: "/onboarding" });
+export default async function TicketDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const landlordId = await requireLandlordId({
+    ensure: true,
+    elseRedirect: "/onboarding",
+  });
 
   const ticket = await prisma.ticket.findFirst({
-    where: { id: params.id, landlordId },
+    where: { id, landlordId },
     include: { tenant: true },
   });
 
@@ -54,12 +69,18 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
           </p>
         </div>
         <div className="flex gap-2">
-          <Button asChild variant="secondary"><Link href="/tickets">Tillbaka</Link></Button>
-          <Button asChild><Link href={`/tickets/${ticket.id}/edit`}>Redigera</Link></Button>
+          <Button asChild variant="secondary">
+            <Link href="/tickets">Tillbaka</Link>
+          </Button>
+          <Button asChild>
+            <Link href={`/tickets/${ticket.id}/edit`}>Redigera</Link>
+          </Button>
 
           {/* Ta bort */}
           <AlertDialog>
-            <AlertDialogTrigger asChild><Button variant="destructive">Ta bort</Button></AlertDialogTrigger>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive">Ta bort</Button>
+            </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Ta bort ärende?</AlertDialogTitle>
@@ -71,7 +92,10 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
                 <AlertDialogCancel>Avbryt</AlertDialogCancel>
                 <form action={deleteTicketAction}>
                   <input type="hidden" name="ticketId" value={ticket.id} />
-                  <AlertDialogAction type="submit" className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  <AlertDialogAction
+                    type="submit"
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
                     Ja, ta bort
                   </AlertDialogAction>
                 </form>
@@ -110,22 +134,39 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
 
       {/* Snabbstatus: ändra status */}
       <Card>
-        <CardHeader><CardTitle className="text-base">Ändra status</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">Ändra status</CardTitle>
+        </CardHeader>
         <CardContent className="flex gap-2">
           <form action={updateTicketStatusAction}>
             <input type="hidden" name="ticketId" value={ticket.id} />
             <input type="hidden" name="status" value="OPEN" />
-            <Button type="submit" variant={ticket.status === "OPEN" ? "default" : "outline"}>Öppen</Button>
+            <Button
+              type="submit"
+              variant={ticket.status === "OPEN" ? "default" : "outline"}
+            >
+              Öppen
+            </Button>
           </form>
           <form action={updateTicketStatusAction}>
             <input type="hidden" name="ticketId" value={ticket.id} />
             <input type="hidden" name="status" value="IN_PROGRESS" />
-            <Button type="submit" variant={ticket.status === "IN_PROGRESS" ? "default" : "outline"}>Pågår</Button>
+            <Button
+              type="submit"
+              variant={ticket.status === "IN_PROGRESS" ? "default" : "outline"}
+            >
+              Pågår
+            </Button>
           </form>
           <form action={updateTicketStatusAction}>
             <input type="hidden" name="ticketId" value={ticket.id} />
             <input type="hidden" name="status" value="CLOSED" />
-            <Button type="submit" variant={ticket.status === "CLOSED" ? "default" : "outline"}>Avslutad</Button>
+            <Button
+              type="submit"
+              variant={ticket.status === "CLOSED" ? "default" : "outline"}
+            >
+              Avslutad
+            </Button>
           </form>
         </CardContent>
       </Card>

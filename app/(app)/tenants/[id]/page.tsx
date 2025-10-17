@@ -24,15 +24,16 @@ import { deleteTenantAction } from "../actions/action";
 export default async function TenantDetailPage({
   params,
 }: {
-  params: { id: string };
+    params: Promise<{ id: string }>;
 }) {
+    const { id } = await params;
   const landlordId = await requireLandlordId({
     ensure: true,
     elseRedirect: "/onboarding",
   });
 
   const tenant = await prisma.tenant.findFirst({
-    where: { id: params.id, landlordId },
+    where: { id, landlordId },
     include: {
       leases: {
         include: { unit: { include: { property: true } } },

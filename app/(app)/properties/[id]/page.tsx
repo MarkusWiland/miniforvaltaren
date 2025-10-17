@@ -25,17 +25,18 @@ export default async function PropertyDetailPage({
   params,
   searchParams,
 }: {
-  params: { id: string };
+    params: Promise<{ id: string }>;
   searchParams: { tab?: string };
 }) {
-  const landlordId = await requireLandlordId({
+    const { id } = await params;
+  const landlordId = await requireLandlordId({  
     ensure: true,
     elseRedirect: "/onboarding",
   });
 
   // Hämta fastigheten och basdata
   const property = await prisma.property.findFirst({
-    where: { id: params.id, landlordId },
+    where: { id, landlordId },
     include: {
       _count: { select: { units: true } },
     },

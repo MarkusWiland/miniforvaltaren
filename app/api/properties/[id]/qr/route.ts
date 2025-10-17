@@ -4,13 +4,14 @@ import QRCode from "qrcode";
 import prisma from "@/lib/prisma";
 import { requireLandlordId } from "@/lib/get-session";
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+export async function GET(_: Request, { params }: { params: Promise<{ id: string; }> }) {
+    const { id } = await params;
   const landlordId = await requireLandlordId({
     ensure: true,
     elseRedirect: "/onboarding",
   });
   const prop = await prisma.property.findFirst({
-    where: { id: params.id, landlordId },
+    where: { id, landlordId },
     select: { intakeToken: true },
   });
   if (!prop) return new NextResponse("Not found", { status: 404 });

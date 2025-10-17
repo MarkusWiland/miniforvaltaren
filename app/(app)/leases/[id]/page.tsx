@@ -26,15 +26,16 @@ function formatSEK(öre: number) {
 export default async function LeaseDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+    const { id } = await params;
   const landlordId = await requireLandlordId({
     ensure: true,
     elseRedirect: "/onboarding",
   });
 
   const lease = await prisma.lease.findFirst({
-    where: { id: params.id, landlordId },
+    where: { id, landlordId },
     include: {
       tenant: true,
       unit: { include: { property: true } },
