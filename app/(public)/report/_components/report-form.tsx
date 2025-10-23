@@ -88,7 +88,7 @@ export function PublicReportForm({
                     <SelectValue placeholder="Välj enhet (om du vet)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Okänt/Annat</SelectItem>
+                    <SelectItem value="Okant">Okänt/Annat</SelectItem>
                     {units.map((u) => (
                       <SelectItem key={u.id} value={u.id}>
                         {u.label}

@@ -5,11 +5,14 @@ import prisma from "@/lib/prisma";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { PublicReportForm } from "../_components/report-form";
 
-export default async function PublicReportPage({ params }: { params: { token: string } }) {
+export default async function PublicReportPage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params;
+  console.log("token", token)
   const property = await prisma.property.findFirst({
-    where: { intakeToken: params.token },
+    where: { intakeToken: token },
     select: { id: true, name: true, landlordId: true, units: { select: { id: true, label: true }, orderBy: { label: "asc" } } },
   });
+  console.log("property", property)
   if (!property) notFound();
 
   return (

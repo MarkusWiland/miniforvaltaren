@@ -40,7 +40,11 @@ export async function publicCreateTicketAction(formData: FormData) {
   let tenantId: string | null = null;
   if (parsed.data.unitId) {
     const lease = await prisma.lease.findFirst({
-      where: { unitId: parsed.data.unitId, landlordId: property.landlordId, OR: [{ endDate: null }, { endDate: { gt: new Date() } }] },
+      where: {
+        unitId: parsed.data.unitId,
+        landlordId: property.landlordId,
+        OR: [{ endDate: null }, { endDate: { gt: new Date() } }],
+      },
       select: { tenantId: true },
       orderBy: { startDate: "desc" },
     });
@@ -50,6 +54,8 @@ export async function publicCreateTicketAction(formData: FormData) {
   await prisma.ticket.create({
     data: {
       landlordId: property.landlordId,
+      propertyId: parsed.data.propertyId,
+      unitId: parsed.data.unitId,
       title: parsed.data.title,
       description: makeDescription(parsed.data),
       status: "OPEN",
@@ -60,7 +66,12 @@ export async function publicCreateTicketAction(formData: FormData) {
   redirect("/report/sent"); // tack-sida
 }
 
-function makeDescription(d: { description: string; name?: string; email?: string; phone?: string; }) {
+function makeDescription(d: {
+  description: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+}) {
   const lines = [d.description.trim()];
   const contact = [
     d.name ? `Namn: ${d.name}` : null,

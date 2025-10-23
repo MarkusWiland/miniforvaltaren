@@ -2,9 +2,8 @@
 import { cache } from "react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth } from "./auth";
+import { auth, User } from "./auth";
 import prisma from "./prisma";
-import type { User } from "better-auth";
 
 // 1) Hämta session (cachas per request)
 export const getServerSession = cache(async () => {
@@ -20,26 +19,32 @@ export const getSessionUser = cache(async (): Promise<User | null> => {
   return user as User | null;
 });
 
-// 3) Hämta landlordId (val: ensure = skapa om saknas)
-export const getSessionLandlordId = cache(async (opts?: { ensure?: boolean }) => {
-  const user = await getSessionUser();
-  if (!user) return null;
+// 3) Hämta landlordId (idempotent med upsert)
+export const getSessionLandlordId = cache(
+  async (opts?: { ensure?: boolean }) => {
+    const user = await getSessionUser();
+    if (!user) return null;
 
-  const existing = await prisma.landlord.findUnique({
-    where: { userId: user.id },
-    select: { id: true },
-  });
-  if (existing) return existing.id;
-
-  if (opts?.ensure) {
-    const created = await prisma.landlord.create({
-      data: { userId: user.id },
+    // Finns redan?
+    const existing = await prisma.landlord.findUnique({
+      where: { userId: user.id },
       select: { id: true },
     });
-    return created.id;
+    if (existing) return existing.id;
+
+    if (opts?.ensure) {
+      // Idempotent skapande
+      const row = await prisma.landlord.upsert({
+        where: { userId: user.id },
+        update: {}, // inget att uppdatera här
+        create: { userId: user.id }, // lägg till ev. defaultfält här
+        select: { id: true },
+      });
+      return row.id;
+    }
+    return null;
   }
-  return null;
-});
+);
 
 // 4) “Require”-varianter för sidor/actions
 export async function requireUser(): Promise<User> {
@@ -48,7 +53,10 @@ export async function requireUser(): Promise<User> {
   return user;
 }
 
-export async function requireLandlordId(opts?: { ensure?: boolean; elseRedirect?: string }) {
+export async function requireLandlordId(opts?: {
+  ensure?: boolean;
+  elseRedirect?: string;
+}) {
   await requireUser();
   const landlordId = await getSessionLandlordId({ ensure: opts?.ensure });
   if (!landlordId) {

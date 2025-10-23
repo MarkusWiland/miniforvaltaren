@@ -1,4 +1,4 @@
-// app/(public)/page.tsx
+'use client'
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,8 @@ import {
   Globe,
 } from "lucide-react";
 import * as React from "react";
+import PlanCard from "./_components/plan-card";
+import { authClient } from "@/lib/auth-client";
 
 /** ================================
  *  HUVUDKOMPONENT
@@ -283,6 +285,11 @@ function FeatureGrid() {
   );
 }
 
+
+// Läs in produkt-ID:n:
+const BASIC_YEARLY = process.env.NEXT_PUBLIC_POLAR_PRODUCT_BASIC_YEARLY!;
+const PRO_YEARLY = process.env.NEXT_PUBLIC_POLAR_PRODUCT_PRO_YEARLY!;
+const ENTERPRISE_YEARLY = process.env.NEXT_PUBLIC_POLAR_PRODUCT_ENTERPRISE_YEARLY!;
 /** ================================
  *  PRICING (med monthly/yearly toggle)
  *  ================================ */
@@ -299,57 +306,99 @@ function Pricing() {
 
         <BillingToggle />
 
-        <div className="mt-8 grid gap-6 sm:grid-cols-3">
-          <PlanCard
-            badge="Gratis"
-            title="FREE"
-            priceMonthly={0}
-            priceYearly={0}
-            unit="/mån"
-            features={[
-              "Upp till 2 enheter",
-              "Obegr. hyresgäster & avtal",
-              "Manuell avisering",
-              "CSV-export",
-            ]}
-            cta={{ href: "/register", label: "Börja gratis" }}
-          />
-          <PlanCard
-            highlighted
-            badge="Mest populär"
-            title="BASIC"
-            priceMonthly={99}
-            priceYearly={999} // ~2 mån gratis
-            unit="kr/mån"
-            features={[
-              "Upp till 10 enheter",
-              "Automatiska avier",
-              "E-postpåminnelser",
-              "Ärendehantering",
-              "Mallbibliotek (avtal/avier)",
-              "Export & filter",
-              "Grundläggande roller",
-            ]}
-            cta={{ href: "/register", label: "Välj BASIC" }}
-          />
-          <PlanCard
-            badge="För växande"
-            title="PRO"
-            priceMonthly={249}
-            priceYearly={2490}
-            unit="kr/mån"
-            features={[
-              "Upp till 25 enheter",
-              "Flera fastigheter",
-              "Prioriterad support",
-              "Avancerade roller & behörigheter",
-              "QR-felanmälan",
-              "Kommande: Bankkoppling*",
-            ]}
-            footnote="*Bankkoppling/filimport kommer som tillägg när tillgängligt."
-            cta={{ href: "/register", label: "Välj PRO" }}
-          />
-        </div>
+
+// ...inne i Pricing()
+<div className="mt-8 grid gap-6 sm:grid-cols-3">
+  {/* FREE */}
+  <PlanCard
+    badge="Gratis"
+    title="FREE"
+    priceMonthly={0}
+    priceYearly={0}
+    unit="kr/mån"
+    features={[
+      "Upp till 2 enheter",
+      "Obegr. hyresgäster & avtal",
+      "Manuell avisering",
+      "CSV-export",
+    ]}
+    ctaSlot={
+      <Link className="w-full" href="/register">
+        <Button className="w-full">Börja gratis</Button>
+      </Link>
+    }
+  />
+
+  {/* BASIC */}
+  <PlanCard 
+    highlighted
+    badge="Mest populär"
+    title="BASIC"
+    priceMonthly={99}
+    priceYearly={999}
+    unit="kr/mån"
+    features={[
+      "Upp till 10 enheter",
+      "Automatiska avier",
+      "E-postpåminnelser",
+      "Ärendehantering",
+      "Mallbibliotek (avtal/avier)",
+      "Export & filter",
+      "Grundläggande roller",
+    ]}
+    ctaSlot={
+     <Button className="w-full" onClick={() => authClient.checkout({ slug: "basic" })}>Basic</Button>
+    }
+  />
+
+  {/* PRO */}
+  <PlanCard
+    badge="För växande"
+    title="PRO"
+    priceMonthly={249}
+    priceYearly={2490}
+    unit="kr/mån"
+    features={[
+      "Upp till 25 enheter",
+      "Flera fastigheter",
+      "Prioriterad support",
+      "Avancerade roller & behörigheter",
+      "QR-felanmälan",
+      "Kommande: Bankkoppling*",
+    ]}
+    footnote="*Bankkoppling/filimport kommer som tillägg när tillgängligt."
+    ctaSlot={
+     <Button className="w-full" onClick={() => authClient.checkout({ slug: "pro" })}>Pro</Button>
+    }
+  />
+</div>
+
+// (valfritt) Enterprise i en ny rad eller egen sektion
+<div className="mt-6 grid gap-6 sm:grid-cols-3">
+  <PlanCard
+    badge="Större behov"
+    title="ENTERPRISE"
+    priceMonthly={0}
+    priceYearly={0}
+    unit=""
+    features={[
+      "Skräddarsydda limits",
+      "SLA & dedikerad support",
+      "SSO/SAML",
+      "Utökade säkerhetskrav",
+    ]}
+    ctaSlot={
+      ENTERPRISE_YEARLY ? (
+        <Button className="w-full" onClick={() => authClient.checkout({ slug: "enterprise" })}>Enterprise</Button>
+      ) : (
+        <Link className="w-full" href="mailto:sales@miniforvaltaren.se">
+          <Button className="w-full">Kontakta sälj</Button>
+        </Link>
+      )
+    }
+  />
+</div>
+
       </div>
     </section>
   );
@@ -366,69 +415,7 @@ function BillingToggle() {
   );
 }
 
-function PlanCard({
-  badge,
-  title,
-  priceMonthly,
-  priceYearly,
-  unit,
-  features,
-  highlighted,
-  cta,
-  footnote,
-}: {
-  badge?: string;
-  title: string;
-  priceMonthly: number;
-  priceYearly: number;
-  unit: string;
-  features: string[];
-  highlighted?: boolean;
-  cta: { href: string; label: string };
-  footnote?: string;
-}) {
-  // “Årsvis” som primärt callout – du kan byta till state om du vill göra interaktivt
-  const showYearly = true;
-  const price = showYearly ? priceYearly : priceMonthly;
-  const sub = showYearly ? "år" : "mån";
-  const priceLabel =
-    price === 0 ? "0 kr/mån" : `${price.toLocaleString("sv-SE")} ${showYearly ? "kr/år" : unit}`;
 
-  return (
-    <Card className={highlighted ? "border-primary shadow-sm" : ""}>
-      <CardHeader>
-        {badge ? (
-          <Badge variant={highlighted ? "default" : "secondary"} className="w-fit">
-            {badge}
-          </Badge>
-        ) : null}
-        <CardTitle className="mt-1">{title}</CardTitle>
-        <div className="text-2xl font-bold">{priceLabel}</div>
-        {showYearly && priceMonthly > 0 ? (
-          <div className="text-xs text-muted-foreground">
-            eller {priceMonthly.toLocaleString("sv-SE")} {unit} (månadsvis)
-          </div>
-        ) : null}
-      </CardHeader>
-      <CardContent>
-        <ul className="mb-6 space-y-2 text-sm">
-          {features.map((f) => (
-            <li key={f} className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-primary" />
-              <span>{f}</span>
-            </li>
-          ))}
-        </ul>
-        <Button asChild className="w-full">
-          <Link href={cta.href}>{cta.label}</Link>
-        </Button>
-        {footnote ? (
-          <p className="mt-3 text-xs text-muted-foreground">{footnote}</p>
-        ) : null}
-      </CardContent>
-    </Card>
-  );
-}
 
 /** ================================
  *  FAQ

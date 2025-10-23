@@ -31,6 +31,13 @@ enum TicketStatus {
   CLOSED
 }
 
+enum Plan {
+  FREE
+  BASIC
+  PRO
+  ENTERPRISE
+}
+
 model User {
   id            String  @id
   name          String
@@ -58,6 +65,7 @@ model Landlord {
   properties  Property[]
   tenants     Tenant[]
   leases      Lease[]
+  plan        Plan             @default(FREE)
   RentInvoice RentInvoice[]
   Ticket      Ticket[]
   members     LandlordMember[] // <-- add this
@@ -72,6 +80,7 @@ model Property {
   units       Unit[]
   intakeToken String   @unique @default(cuid()) // offentlig token för QR-länk
   createdAt   DateTime @default(now())
+  Ticket      Ticket[]
 }
 
 model Unit {
@@ -174,22 +183,27 @@ model LandlordMember {
 }
 
 model Ticket {
-  id         String   @id @default(cuid())
-  landlordId String
-  landlord   Landlord @relation(fields: [landlordId], references: [id])
-
-  unitId   String?
-  unit     Unit?   @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  tenantId String?
-  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
+  id          String       @id @default(cuid())
+  landlordId  String
+  propertyId  String
+  unitId      String?
+  tenantId    String?
   title       String
   description String?
   status      TicketStatus @default(OPEN)
+  createdAt   DateTime     @default(now())
+  closedAt    DateTime?
 
-  createdAt DateTime  @default(now())
-  closedAt  DateTime?
+  landlord    Landlord     @relation(fields: [landlordId], references: [id])
+  property    Property     @relation(fields: [propertyId], references: [id])
+  unit        Unit?        @relation(fields: [unitId], references: [id])
+  tenant      Tenant?      @relation(fields: [tenantId], references: [id])
+
+  // 👇 Lägg dina index här
+  @@index([landlordId, propertyId, status])
+  @@index([landlordId, unitId])
 }
+
 
 model Session {
   id        String   @id

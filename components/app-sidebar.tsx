@@ -13,13 +13,26 @@ import {
   Receipt,
   Wrench,
   Settings,
+  CreditCardIcon,
 } from "lucide-react";
 import * as React from "react";
-import { User } from "better-auth";
+import { User } from "@/lib/auth";
+import { authClient } from "@/lib/auth-client";
+import { useHasActiveSubscription } from "@/features/subscriptions/hooks/use-subscription";
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "./ui/sidebar";
+type IconKey =
+  | "home"
+  | "building"
+  | "users"
+  | "fileText"
+  | "receipt"
+  | "wrench"
+  | "settings";
 
-type IconKey = "home" | "building" | "users" | "fileText" | "receipt" | "wrench" | "settings";
-
-const ICONS: Record<IconKey, React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
+const ICONS: Record<
+  IconKey,
+  React.ComponentType<React.SVGProps<SVGSVGElement>>
+> = {
   home: Home,
   building: Building,
   users: Users,
@@ -37,7 +50,8 @@ export function AppSidebar({
   links: { name: string; href: string; icon: IconKey }[];
 }) {
   const pathname = usePathname();
-
+  console.log("user", user);
+  const { hasActiveSubscription, isLoading } = useHasActiveSubscription();
   return (
     <div className="h-dvh flex flex-col">
       <div className="h-12 px-4 flex items-center font-semibold">
@@ -49,7 +63,8 @@ export function AppSidebar({
           {links.map((l) => {
             const Icon = ICONS[l.icon];
             const active =
-              pathname === l.href || (l.href !== "/dashboard" && pathname.startsWith(l.href));
+              pathname === l.href ||
+              (l.href !== "/dashboard" && pathname.startsWith(l.href));
             return (
               <Link
                 key={l.href}
@@ -69,10 +84,33 @@ export function AppSidebar({
         </nav>
       </ScrollArea>
       <Separator />
-      <div className="p-3 text-xs text-muted-foreground">
-        <div className="font-medium text-foreground">{user.name ?? user.email}</div>
-        <div className="truncate">{user.email}</div>
-      </div>
+      <SidebarMenu>
+        {user.plan}
+        {!hasActiveSubscription && (
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() =>
+                authClient.checkout({
+                  slug: "basic",
+                })
+              }
+              disabled={isLoading}
+            >
+              <CreditCardIcon className="h-4 w-4" />
+              <span>Uppgradera till basic</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        )}
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            onClick={() => authClient.customer.portal()}
+            disabled={isLoading}
+          >
+            <CreditCardIcon className="h-4 w-4" />
+            <span>{isLoading ? "Öppnar…" : "Abonnemang"}</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
     </div>
   );
 }

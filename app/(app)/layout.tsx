@@ -3,11 +3,12 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
-
 // TODO: ersätt med din riktiga auth-funktion
 import { getServerSession, getSessionUser } from "@/lib/get-session";
 import { UserNav } from "@/components/user-nav";
 import { AppSidebar } from "@/components/app-sidebar";
+import { getViewer, getViewerOrRedirect } from "@/lib/viewer-session";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 export const metadata: Metadata = {
   title: "MiniFörvaltaren",
@@ -19,9 +20,8 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getSessionUser();
-  if (!user) redirect("/login");
-
+  const user = await getViewerOrRedirect();
+  console.log("userrr", user);
   // Globala länkar i app-ytan
   const links = [
     { name: "Dashboard", href: "/dashboard", icon: "home" as const },
@@ -34,31 +34,33 @@ export default async function AppLayout({
   ];
 
   return (
-    <div className="min-h-dvh bg-background text-foreground">
-      <div className="grid grid-cols-[260px_1fr] lg:grid-cols-[280px_1fr]">
-        {/* Sidebar */}
-        <aside className="hidden md:block border-r bg-card/30">
-          <AppSidebar user={user} links={links} />
-        </aside>
+    <SidebarProvider>
+      <div className="min-h-dvh bg-background text-foreground w-full">
+        <div className="grid grid-cols-[260px_1fr] lg:grid-cols-[280px_1fr]">
+          {/* Sidebar */}
+          <aside className="hidden md:block border-r bg-card/30">
+            <AppSidebar user={user} links={links} />
+          </aside>
 
-        {/* Mobile topbar + drawer (lätt version – kan byggas ut senare) */}
-        <div className="md:hidden border-b bg-card/30">
-          <div className="flex items-center justify-between px-3 h-12">
-            <Link href="/dashboard" className="font-semibold">
-              MiniFörvaltaren
-            </Link>
-            <UserNav user={user} />
+          {/* Mobile topbar + drawer (lätt version – kan byggas ut senare) */}
+          <div className="md:hidden border-b bg-card/30">
+            <div className="flex items-center justify-between px-3 h-12">
+              <Link href="/dashboard" className="font-semibold">
+                MiniFörvaltaren
+              </Link>
+              <UserNav user={user} />
+            </div>
           </div>
+
+          {/* Innehåll */}
+          <main className="p-4 md:p-6">
+            <div className="hidden md:flex justify-end mb-4">
+              <UserNav user={user} />
+            </div>
+            {children}
+          </main>
         </div>
-
-        {/* Innehåll */}
-        <main className="p-4 md:p-6">
-          <div className="hidden md:flex justify-end mb-4">
-            <UserNav user={user} />
-          </div>
-          {children}
-        </main>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }

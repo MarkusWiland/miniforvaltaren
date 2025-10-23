@@ -9,7 +9,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { LogOut } from "lucide-react";
-import { User } from "better-auth";
+import { User } from "@/lib/auth";
+
 
 // TODO: byt mot din riktiga signOut-funktion
 async function signOut() {
