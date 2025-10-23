@@ -15,12 +15,12 @@ export const metadata = {
   description: "Tack för att du rapporterade felet.",
 };
 
-export default function ReportSentPage({
+export default async function ReportSentPage({
   searchParams,
 }: {
-  searchParams?: { ticketId?: string };
+  searchParams: Promise<{ ticketId: string }>;
 }) {
-  const ticketId = searchParams?.ticketId;
+  const { ticketId } = await searchParams;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4">
