@@ -24,8 +24,9 @@ import {
 export default async function OnboardingPage({
   searchParams,
 }: {
-  searchParams?: { step?: string; err?: string };
+  searchParams?: Promise<{ step?: string; err?: string }>;
 }) {
+  const searchParamsData = await searchParams;
   const user = await requireUser();
   const landlordId =
     (await getSessionLandlordId({ ensure: true })) ?? null;
@@ -64,7 +65,7 @@ export default async function OnboardingPage({
 
   // Beräkna steg om det ej är angivet
   const computedStep = !haveProfile ? 1 : !haveProperty ? 2 : !haveUnits ? 3 : 4;
-  const step = Number(searchParams?.step ?? computedStep);
+  const step = Number(searchParamsData?.step ?? computedStep);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-4">

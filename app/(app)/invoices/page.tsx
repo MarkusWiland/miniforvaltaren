@@ -26,20 +26,21 @@ function formatSEK(öre: number) {
 export default async function InvoicesPage({
   searchParams,
 }: {
-  searchParams?: { status?: string; propertyId?: string };
+  searchParams?: Promise<{ status?: string; propertyId?: string }>;
 }) {
+  const searchParamsData = await searchParams;
   const landlordId = await requireLandlordId({ ensure: true, elseRedirect: "/onboarding" });
 
   const where: any = { landlordId };
 
   // Filtrering per status
-  if (searchParams?.status) {
-    where.status = searchParams.status.toUpperCase();
+  if (searchParamsData?.status) {
+    where.status = searchParamsData.status.toUpperCase();
   }
 
   // Filtrering per fastighet
-  if (searchParams?.propertyId) {
-    where.lease = { unit: { propertyId: searchParams.propertyId } };
+  if (searchParamsData?.propertyId) {
+    where.lease = { unit: { propertyId: searchParamsData.propertyId } };
   }
 
   const [invoices, properties] = await Promise.all([
@@ -87,11 +88,11 @@ export default async function InvoicesPage({
           <Button
             asChild
             size="sm"
-            variant={!searchParams?.propertyId ? "default" : "outline"}
+            variant={!searchParamsData?.propertyId ? "default" : "outline"}
           >
             <Link
               href={`/invoices${
-                searchParams?.status ? `?status=${searchParams.status}` : ""
+                searchParamsData?.status ? `?status=${searchParamsData.status}` : ""
               }`}
             >
               Alla fastigheter
@@ -104,11 +105,11 @@ export default async function InvoicesPage({
               key={p.id}
               asChild
               size="sm"
-              variant={searchParams?.propertyId === p.id ? "default" : "outline"}
+              variant={searchParamsData?.propertyId === p.id ? "default" : "outline"}
             >
               <Link
                 href={`/invoices?propertyId=${p.id}${
-                  searchParams?.status ? `&status=${searchParams.status}` : ""
+                  searchParamsData?.status ? `&status=${searchParamsData.status}` : ""
                 }`}
               >
                 {p.name}
@@ -120,19 +121,19 @@ export default async function InvoicesPage({
             <Button
               asChild
               size="sm"
-              variant={!searchParams?.status ? "default" : "outline"}
+              variant={!searchParamsData?.status ? "default" : "outline"}
             >
               <Link href="/invoices">Alla</Link>
             </Button>
             <Button
               asChild
               size="sm"
-              variant={searchParams?.status === "pending" ? "default" : "outline"}
+              variant={searchParamsData?.status === "pending" ? "default" : "outline"}
             >
               <Link
                 href={`/invoices?status=pending${
-                  searchParams?.propertyId
-                    ? `&propertyId=${searchParams.propertyId}`
+                  searchParamsData?.propertyId
+                    ? `&propertyId=${searchParamsData.propertyId}`
                     : ""
                 }`}
               >
@@ -142,12 +143,12 @@ export default async function InvoicesPage({
             <Button
               asChild
               size="sm"
-              variant={searchParams?.status === "paid" ? "default" : "outline"}
+              variant={searchParamsData?.status === "paid" ? "default" : "outline"}
             >
               <Link
                 href={`/invoices?status=paid${
-                  searchParams?.propertyId
-                    ? `&propertyId=${searchParams.propertyId}`
+                  searchParamsData?.propertyId
+                    ? `&propertyId=${searchParamsData.propertyId}`
                     : ""
                 }`}
               >
@@ -157,12 +158,12 @@ export default async function InvoicesPage({
             <Button
               asChild
               size="sm"
-              variant={searchParams?.status === "overdue" ? "default" : "outline"}
+              variant={searchParamsData?.status === "overdue" ? "default" : "outline"}
             >
               <Link
                 href={`/invoices?status=overdue${
-                  searchParams?.propertyId
-                    ? `&propertyId=${searchParams.propertyId}`
+                  searchParamsData?.propertyId
+                    ? `&propertyId=${searchParamsData.propertyId}`
                     : ""
                 }`}
               >

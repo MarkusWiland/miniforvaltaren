@@ -1,5 +1,15 @@
 "use client";
 
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+
+import { authClient } from "@/lib/auth-client";
+import { passwordSchema } from "@/lib/validation";
 
 import { LoadingButton } from "@/components/loading-button";
 import { PasswordInput } from "@/components/password-input";
@@ -20,37 +30,26 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { authClient } from "@/lib/auth-client";
-import { passwordSchema } from "@/lib/validation";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { z } from "zod";
-
+// ——— Schema ————————————————————————————————————————————
 const signUpSchema = z
   .object({
-    name: z.string().min(1, { message: "Name is required" }),
-    email: z.email({ message: "Please enter a valid email" }),
-    password: passwordSchema,
-    passwordConfirmation: z
-      .string()
-      .min(1, { message: "Please confirm password" }),
+    name: z.string().min(1, { message: "Namn är obligatoriskt" }),
+    email: z.string().email({ message: "Ange en giltig e-postadress" }),
+    password: passwordSchema, // din befintliga lösenordsvalidering
+    passwordConfirmation: z.string().min(1, { message: "Bekräfta ditt lösenord" }),
   })
   .refine((data) => data.password === data.passwordConfirmation, {
-    message: "Passwords do not match",
+    message: "Lösenorden matchar inte",
     path: ["passwordConfirmation"],
   });
 
 type SignUpValues = z.infer<typeof signUpSchema>;
 
+// ——— Komponent ————————————————————————————————————————————
 export function SignUpForm() {
-  const [error, setError] = useState<string | null>(null);
-
   const router = useRouter();
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm<SignUpValues>({
     resolver: zodResolver(signUpSchema),
@@ -60,63 +59,74 @@ export function SignUpForm() {
       password: "",
       passwordConfirmation: "",
     },
+    mode: "onTouched",
   });
 
+  const loading = form.formState.isSubmitting;
+
   async function onSubmit({ email, password, name }: SignUpValues) {
-    setError(null);
+    setSubmitError(null);
 
     const { error } = await authClient.signUp.email({
       email,
       password,
       name,
-      callbackURL: "/email-verified",
+      callbackURL: "/onboarding", // Direkt in i onboarding
     });
 
     if (error) {
-      setError(error.message || "Something went wrong");
-    } else {
-      toast.success("Signed up successfully");
-      router.push("/dashboard");
+      setSubmitError(error.message || "Något gick fel. Försök igen.");
+      return;
     }
+
+    toast.success("Konto skapat! Välkommen 👋");
+    router.push("/onboarding");
   }
 
-  const loading = form.formState.isSubmitting;
-
   return (
-    <Card className="w-full max-w-md">
+    <Card className="w-full max-w-md border-border/60">
       <CardHeader>
-        <CardTitle className="text-lg md:text-xl">Sign Up</CardTitle>
+        <CardTitle className="text-lg md:text-xl">Skapa konto</CardTitle>
         <CardDescription className="text-xs md:text-sm">
-          Enter your information to create an account
+          Fyll i uppgifterna nedan för att börja med MiniFörvaltaren.
         </CardDescription>
       </CardHeader>
+
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Namn */}
             <FormField
               control={form.control}
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>Namn</FormLabel>
                   <FormControl>
-                    <Input placeholder="John Doe" {...field} />
+                    <Input
+                      placeholder="Ex. Anna Andersson"
+                      autoComplete="name"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
+            {/* E-post */}
             <FormField
               control={form.control}
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>E-post</FormLabel>
                   <FormControl>
                     <Input
                       type="email"
-                      placeholder="your@email.com"
+                      placeholder="du@exempel.se"
+                      autoComplete="email"
+                      inputMode="email"
                       {...field}
                     />
                   </FormControl>
@@ -125,34 +135,39 @@ export function SignUpForm() {
               )}
             />
 
+            {/* Lösenord */}
             <FormField
               control={form.control}
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel>Lösenord</FormLabel>
                   <FormControl>
                     <PasswordInput
+                      placeholder="Minst enligt kraven"
                       autoComplete="new-password"
-                      placeholder="Password"
                       {...field}
                     />
                   </FormControl>
+                  <p className="text-[11px] text-muted-foreground">
+                    Välj ett starkt lösenord. (Tips: minst 8 tecken, blandade typer)
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
+            {/* Bekräfta lösenord */}
             <FormField
               control={form.control}
               name="passwordConfirmation"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Confirm Password</FormLabel>
+                  <FormLabel>Bekräfta lösenord</FormLabel>
                   <FormControl>
                     <PasswordInput
+                      placeholder="Upprepa lösenordet"
                       autoComplete="new-password"
-                      placeholder="Confirm password"
                       {...field}
                     />
                   </FormControl>
@@ -161,24 +176,38 @@ export function SignUpForm() {
               )}
             />
 
-            {error && (
-              <div role="alert" className="text-sm text-red-600">
-                {error}
+            {/* Serverfel */}
+            {submitError && (
+              <div role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {submitError}
               </div>
             )}
 
             <LoadingButton type="submit" className="w-full" loading={loading}>
-              Create an account
+              Skapa konto
             </LoadingButton>
+
+            <p className="text-[11px] text-muted-foreground text-center">
+              Genom att fortsätta godkänner du våra{" "}
+              <Link href="/terms" className="underline">
+                villkor
+              </Link>{" "}
+              och{" "}
+              <Link href="/privacy" className="underline">
+                integritetspolicy
+              </Link>
+              .
+            </p>
           </form>
         </Form>
       </CardContent>
+
       <CardFooter>
         <div className="flex w-full justify-center border-t pt-4">
           <p className="text-muted-foreground text-center text-xs">
-            Already have an account?{" "}
+            Har du redan ett konto?{" "}
             <Link href="/sign-in" className="underline">
-              Sign in
+              Logga in
             </Link>
           </p>
         </div>

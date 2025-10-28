@@ -5,12 +5,14 @@ import prisma from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import z from "zod";
 
-// 1) Spara hyresvärdsprofil (orgName)
+const OrgSchema = z.object({
+  orgName: z.string().min(2, "Ange företagsnamn").max(120),
+});
+
 export async function saveProfileAction(formData: FormData) {
   const user = await requireUser();
   const landlordId =
     (await getSessionLandlordId({ ensure: true })) ??
-    // fallback
     (
       await prisma.landlord.create({
         data: { userId: user.id },
@@ -18,13 +20,21 @@ export async function saveProfileAction(formData: FormData) {
       })
     ).id;
 
-  const orgName = (formData.get("orgName") ?? "").toString().trim();
-  if (orgName.length > 0) {
-    await prisma.landlord.update({
-      where: { id: landlordId },
-      data: { orgName },
-    });
+  const parse = OrgSchema.safeParse({
+    orgName: (formData.get("orgName") ?? "").toString().trim(),
+  });
+  if (!parse.success) {
+    return redirect("/onboarding?step=1&err=org");
   }
+
+  await prisma.landlord.update({
+    where: { id: landlordId },
+    data: { orgName: parse.data.orgName },
+  });
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { company: parse.data.orgName },
+  });
   redirect("/onboarding?step=2");
 }
 

@@ -1,5 +1,14 @@
 "use client";
 
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+
+import { authClient } from "@/lib/auth-client";
 
 import { LoadingButton } from "@/components/loading-button";
 import { PasswordInput } from "@/components/password-input";
@@ -22,44 +31,34 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { authClient } from "@/lib/auth-client";
-import { zodResolver } from "@hookform/resolvers/zod";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { z } from "zod";
 
+// ——— Validering ——————————————————————————————————————
 const signInSchema = z.object({
-  email: z.email({ message: "Please enter a valid email" }),
-  password: z.string().min(1, { message: "Password is required" }),
+  email: z.string().email({ message: "Ange en giltig e-postadress" }),
+  password: z.string().min(1, { message: "Lösenord är obligatoriskt" }),
   rememberMe: z.boolean().optional(),
 });
 
 type SignInValues = z.infer<typeof signInSchema>;
 
+// ——— Komponent ————————————————————————————————————————
 export function SignInForm() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  const redirect = searchParams.get("redirect");
+  const redirect = searchParams.get("redirect") ?? "/dashboard";
 
   const form = useForm<SignInValues>({
     resolver: zodResolver(signInSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-      rememberMe: false,
-    },
+    defaultValues: { email: "", password: "", rememberMe: false },
+    mode: "onTouched",
   });
 
   async function onSubmit({ email, password, rememberMe }: SignInValues) {
-    setError(null);
-    setLoading(true);
+    setSubmitError(null);
+    setSubmitting(true);
 
     const { error } = await authClient.signIn.email({
       email,
@@ -67,53 +66,58 @@ export function SignInForm() {
       rememberMe,
     });
 
-    setLoading(false);
+    setSubmitting(false);
 
     if (error) {
-      setError(error.message || "Something went wrong");
-    } else {
-      toast.success("Signed in successfully");
-      router.push(redirect ?? "/dashboard");
+      setSubmitError(error.message || "Något gick fel. Försök igen.");
+      return;
     }
+
+    toast.success("Inloggad! Välkommen tillbaka 👋");
+    router.push(redirect);
   }
 
   async function handleSocialSignIn(provider: "google" | "github") {
-    setError(null);
-    setLoading(true);
+    setSubmitError(null);
+    setSubmitting(true);
 
     const { error } = await authClient.signIn.social({
       provider,
-      callbackURL: redirect ?? "/dashboard",
+      callbackURL: redirect,
     });
 
-    setLoading(false);
+    setSubmitting(false);
 
     if (error) {
-      setError(error.message || "Something went wrong");
+      setSubmitError(error.message || "Kunde inte logga in just nu.");
     }
   }
 
   return (
-    <Card className="w-full max-w-md">
+    <Card className="w-full max-w-md border-border/60">
       <CardHeader>
-        <CardTitle className="text-lg md:text-xl">Sign In</CardTitle>
+        <CardTitle className="text-lg md:text-xl">Logga in</CardTitle>
         <CardDescription className="text-xs md:text-sm">
-          Enter your email below to login to your account
+          Ange dina uppgifter för att komma åt ditt konto.
         </CardDescription>
       </CardHeader>
+
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* E-post */}
             <FormField
               control={form.control}
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>E-post</FormLabel>
                   <FormControl>
                     <Input
                       type="email"
-                      placeholder="your@email.com"
+                      inputMode="email"
+                      autoComplete="email"
+                      placeholder="du@exempel.se"
                       {...field}
                     />
                   </FormControl>
@@ -122,24 +126,25 @@ export function SignInForm() {
               )}
             />
 
+            {/* Lösenord + glömt */}
             <FormField
               control={form.control}
               name="password"
               render={({ field }) => (
                 <FormItem>
                   <div className="flex items-center">
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel>Lösenord</FormLabel>
                     <Link
                       href="/forgot-password"
                       className="ml-auto inline-block text-sm underline"
                     >
-                      Forgot your password?
+                      Glömt lösenord?
                     </Link>
                   </div>
                   <FormControl>
                     <PasswordInput
                       autoComplete="current-password"
-                      placeholder="Password"
+                      placeholder="Ditt lösenord"
                       {...field}
                     />
                   </FormControl>
@@ -148,6 +153,7 @@ export function SignInForm() {
               )}
             />
 
+            {/* Kom ihåg mig */}
             <FormField
               control={form.control}
               name="rememberMe"
@@ -157,55 +163,61 @@ export function SignInForm() {
                     <Checkbox
                       checked={field.value}
                       onCheckedChange={field.onChange}
+                      aria-label="Kom ihåg mig"
                     />
                   </FormControl>
-                  <FormLabel>Remember me</FormLabel>
+                  <FormLabel className="mb-0">Kom ihåg mig</FormLabel>
                 </FormItem>
               )}
             />
 
-            {error && (
-              <div role="alert" className="text-sm text-red-600">
-                {error}
+            {/* Serverfel */}
+            {submitError && (
+              <div
+                role="alert"
+                aria-live="polite"
+                className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              >
+                {submitError}
               </div>
             )}
 
-            <LoadingButton type="submit" className="w-full" loading={loading}>
-              Login
+            {/* Primär CTA */}
+            <LoadingButton type="submit" className="w-full" loading={submitting}>
+              Logga in
             </LoadingButton>
 
-            <div className="flex w-full flex-col items-center justify-between gap-2">
+            {/* Social logga in */}
+            <div className="flex w-full flex-col gap-2 pt-1">
               <Button
                 type="button"
                 variant="outline"
                 className="w-full gap-2"
-                disabled={loading}
+                disabled={submitting}
                 onClick={() => handleSocialSignIn("google")}
               >
-             
-                Sign in with Google
+                Fortsätt med Google
               </Button>
-
               <Button
                 type="button"
                 variant="outline"
                 className="w-full gap-2"
-                disabled={loading}
+                disabled={submitting}
                 onClick={() => handleSocialSignIn("github")}
               >
-             
-                Sign in with Github
+                Fortsätt med GitHub
               </Button>
             </div>
           </form>
         </Form>
       </CardContent>
+
       <CardFooter>
         <div className="flex w-full justify-center border-t pt-4">
           <p className="text-muted-foreground text-center text-xs">
-            Don&apos;t have an account?{" "}
+            Saknar du konto?{" "}
             <Link href="/sign-up" className="underline">
-              Sign up
+              Skapa konto
             </Link>
           </p>
         </div>

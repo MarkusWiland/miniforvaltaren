@@ -1,11 +1,13 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { polar, checkout, portal } from "@polar-sh/better-auth";
+import { organization } from "better-auth/plugins";
 import { polarClient } from "./polar";
 import prisma from "./prisma";
 
 export const auth = betterAuth({
   plugins: [
+    organization(),
     polar({
       client: polarClient,
       createCustomerOnSignUp: true,
@@ -39,8 +41,10 @@ export const auth = betterAuth({
         default: "FREE",
         input: false,
       },
+  
     },
   },
+
   emailAndPassword: {
     enabled: true,
   },

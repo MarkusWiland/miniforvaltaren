@@ -39,22 +39,59 @@ enum Plan {
 }
 
 model User {
-  id            String  @id
-  name          String
-  email         String
-  emailVerified Boolean @default(false)
-  image         String?
-  role          String?
-
+  id             String           @id
+  name           String
+  email          String
+  emailVerified  Boolean          @default(false)
+  image          String?
+  role           String?
+  company        String?
+  memberships    Membership[]
   landlord       Landlord?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @default(now()) @updatedAt
   sessions       Session[]
   accounts       Account[]
   LandlordMember LandlordMember[]
+  Organization   Organization[]
 
   @@unique([email])
   @@map("user")
+}
+
+model Organization {
+  id          String  @id @default(cuid())
+  name        String
+  slug        String? @unique
+  createdById String
+  createdBy   User    @relation(fields: [createdById], references: [id])
+
+  // Billing/Polar – lägg här (inte på User)
+  plan                Plan    @default(FREE)
+  polarCustomerId     String? @unique
+  polarSubscriptionId String?
+
+  properties  Property[]
+  memberships Membership[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Membership {
+  userId         String
+  organizationId String
+  role           Role         @default(OWNER)
+  user           User         @relation(fields: [userId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@id([userId, organizationId])
+  @@index([organizationId])
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
 }
 
 model Landlord {
@@ -72,15 +109,17 @@ model Landlord {
 }
 
 model Property {
-  id          String   @id @default(cuid())
-  landlordId  String
-  landlord    Landlord @relation(fields: [landlordId], references: [id])
-  name        String
-  address     String
-  units       Unit[]
-  intakeToken String   @unique @default(cuid()) // offentlig token för QR-länk
-  createdAt   DateTime @default(now())
-  Ticket      Ticket[]
+  id             String        @id @default(cuid())
+  landlordId     String
+  landlord       Landlord      @relation(fields: [landlordId], references: [id])
+  name           String
+  address        String
+  units          Unit[]
+  intakeToken    String        @unique @default(cuid()) // offentlig token för QR-länk
+  createdAt      DateTime      @default(now())
+  Ticket         Ticket[]
+  Organization   Organization? @relation(fields: [organizationId], references: [id])
+  organizationId String?
 }
 
 model Unit {
@@ -160,16 +199,6 @@ model Payment {
   @@index([paidDate])
 }
 
-// Lägg till i Prisma
-enum Role {
-  OWNER // full kontroll
-  ADMIN // nästan allt (ej fakturering/ägarebyte)
-  MANAGER // CRUD properties/units/tenants/leases/tickets
-  ACCOUNTANT // läs + hantera avier/betalningar
-  STAFF // endast tickets (läsa/uppdatera), läsa properties/units
-  VIEWER // read-only
-}
-
 model LandlordMember {
   id         String @id @default(cuid())
   landlordId String
@@ -194,16 +223,15 @@ model Ticket {
   createdAt   DateTime     @default(now())
   closedAt    DateTime?
 
-  landlord    Landlord     @relation(fields: [landlordId], references: [id])
-  property    Property     @relation(fields: [propertyId], references: [id])
-  unit        Unit?        @relation(fields: [unitId], references: [id])
-  tenant      Tenant?      @relation(fields: [tenantId], references: [id])
+  landlord Landlord @relation(fields: [landlordId], references: [id])
+  property Property @relation(fields: [propertyId], references: [id])
+  unit     Unit?    @relation(fields: [unitId], references: [id])
+  tenant   Tenant?  @relation(fields: [tenantId], references: [id])
 
   // 👇 Lägg dina index här
   @@index([landlordId, propertyId, status])
   @@index([landlordId, unitId])
 }
-
 
 model Session {
   id        String   @id

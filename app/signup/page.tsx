@@ -1,32 +1,23 @@
+import { GalleryVerticalEnd } from "lucide-react"
 
-import { getServerSession } from "@/lib/get-session";
-import { GalleryVerticalEnd } from "lucide-react";
-import { redirect } from "next/navigation";
-import { ReactNode } from "react";
+import { SignupForm } from "@/components/signup-form"
 
-export default async function AuthLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  const session = await getServerSession();
-  const user = session?.user;
-
-  if (user) redirect("/dashboard");
-
+export default function SignupPage() {
   return (
-      <div className="grid min-h-svh lg:grid-cols-2">
+    <div className="grid min-h-svh lg:grid-cols-2">
       <div className="flex flex-col gap-4 p-6 md:p-10">
         <div className="flex justify-center gap-2 md:justify-start">
           <a href="#" className="flex items-center gap-2 font-medium">
             <div className="bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-md">
               <GalleryVerticalEnd className="size-4" />
             </div>
-            EnkelFörvaltning
+            Acme Inc.
           </a>
         </div>
         <div className="flex flex-1 items-center justify-center">
-          <div className="w-full sm:max-w-xs md:max-w-sm lg:max-w-md">{children}</div>
+          <div className="w-full max-w-xs">
+            <SignupForm />
+          </div>
         </div>
       </div>
       <div className="bg-muted relative hidden lg:block">
@@ -37,5 +28,5 @@ export default async function AuthLayout({
         />
       </div>
     </div>
-  );
+  )
 }

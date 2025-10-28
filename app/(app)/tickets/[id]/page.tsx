@@ -116,6 +116,14 @@ export default async function TicketDetailPage({
             <div className="font-medium">{ticket.title}</div>
           </div>
           <div>
+            <div className="text-sm text-muted-foreground">Lägenhet</div>
+            <div className="font-medium">{ticket.unitId}</div>
+          </div>
+          <div>
+            <div className="text-sm text-muted-foreground">Fastighet</div>
+            <div className="font-medium">{ticket.propertyId}</div>
+          </div>
+          <div>
             <div className="text-sm text-muted-foreground">Status</div>
             <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
           </div>
